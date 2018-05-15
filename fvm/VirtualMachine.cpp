@@ -21,11 +21,12 @@ VirtualMachine::VirtualMachine() {
 void VirtualMachine::LoadOpCode(std::istream &is) {
     Initialize();
     auto &o = OpcodeUtil::GetInstance();
-    char opcode;
-    char buf=0;
-    long val;
+    unsigned char opcode;
+    unsigned char buf=0;
+    unsigned long val;
+    opcode = 0;
     
-    while(is.read(&opcode, 1))
+    while(is.read((char*)&opcode, 1))
     {
         auto ins = INSTRUCTION{};
         
@@ -36,7 +37,7 @@ void VirtualMachine::LoadOpCode(std::istream &is) {
             if (o.aOpcode[opcode].optype[i] == OPERAND_TYPE::reg_4 ||
                 o.aOpcode[opcode].optype[i] == OPERAND_TYPE::ref_reg_4)
             {
-                is.read(&buf, 1);
+                is.read((char*)&buf, 1);
                 ins.operand[i].INT = (buf >> 4) & 0x0f;
                 ins.operand[i+1].INT = buf & 0x0f;
                 i++;
@@ -45,7 +46,7 @@ void VirtualMachine::LoadOpCode(std::istream &is) {
                 val = 0;
                 for(auto j=0; j<o.aOpcode[opcode].oplen[i]; j++)
                 {
-                    is.read(&buf, 1);
+                    is.read((char*)&buf, 1);
                     val = (val << 8) | (buf & 0xff);
                 }
                 ins.operand[i].INT = val;
@@ -67,16 +68,16 @@ EXECUTIONRESULT VirtualMachine::Execute() {
     try
     {
         const INSTRUCTION& ins = programVector.at(programCounter);
-
+        
         switch (ins.opcode)
         {
             case OPCODE::nop:
                 break;
-
+                
             case OPCODE::halt:
                 bTerminated = true;
                 break;
-
+                
             case OPCODE::mov_reg4_reg4:
             case OPCODE::mov_reg8_reg8:
                 registerVector.at(ins.operand[0].INT) = registerVector.at(ins.operand[1].INT);
@@ -98,18 +99,18 @@ EXECUTIONRESULT VirtualMachine::Execute() {
             case OPCODE::subi_reg8_reg8:
                 registerVector.at(ins.operand[0].INT).INT -= registerVector.at(ins.operand[1].INT).INT;
                 break;
-
+                
             case OPCODE::muli_reg4_reg4:
             case OPCODE::muli_reg8_reg8:
                 registerVector.at(ins.operand[0].INT).INT *= registerVector.at(ins.operand[1].INT).INT;
                 break;
-
-            // Todo: div_by_zero will be handled soon.
+                
+                // Todo: div_by_zero will be handled soon.
             case OPCODE::divi_reg4_reg4:
             case OPCODE::divi_reg8_reg8:
                 registerVector.at(ins.operand[0].INT).INT /= registerVector.at(ins.operand[1].INT).INT;
                 break;
-
+                
             case OPCODE::modi_reg4_reg4:
             case OPCODE::modi_reg8_reg8:
                 registerVector.at(ins.operand[0].INT).INT %= registerVector.at(ins.operand[1].INT).INT;
@@ -183,8 +184,8 @@ EXECUTIONRESULT VirtualMachine::Execute() {
                 nextProgramCounter = registerVector.at(ins.operand[0].INT).INT <=
                 registerVector.at(ins.operand[1].INT).INT ? programCounter + ins.operand[2].INT : nextProgramCounter;
                 break;
-
-            // Object-Oriented Related Feature
+                
+                // Object-Oriented Related Feature
             case OPCODE::new_val8_val8_val8:
             case OPCODE::new_val16_val8_val8:
             case OPCODE::call_static_val8_val8_val8:
@@ -194,7 +195,7 @@ EXECUTIONRESULT VirtualMachine::Execute() {
             case OPCODE::store_reg8_ref8_val8:
             case OPCODE::store_reg8_ref8_val16:
                 break;
-
+                
             case OPCODE::ret_reg8:
                 returnedValue = registerVector.at(ins.operand[0].INT);
             case OPCODE::ret_val8:
@@ -208,11 +209,14 @@ EXECUTIONRESULT VirtualMachine::Execute() {
             case OPCODE::movret_reg8:
                 registerVector.at(ins.operand[0].INT) = returnedValue;
                 break;
-
+                
             default:
+                if(bDebugMode)
+                    printf("Unhandled OpCode %02x : %02llx %02llx %02llx\n", ins.opcode, ins.operand[0].INT, ins.operand[1].INT, ins.operand[2].INT);
+                
                 throw std::exception(); // not implemented opcode
         }
-    
+        
         if(bDebugMode)
         {
             printf("Opcode: %02x %02llx %02llx %02llx , ProgramCounter: %lld , NextProgramCounter: %lld\n", ins.opcode, ins.operand[0].INT, ins.operand[1].INT, ins.operand[2].INT, programCounter, nextProgramCounter);
@@ -228,17 +232,19 @@ EXECUTIONRESULT VirtualMachine::Execute() {
     {
         if (bDebugMode)
             printf("Error on %s \n", e.what());
+        
         ret.bTerminated = true;
         ret.bException = true;
         return ret;
     }
     catch(...)
     {
-       if (bDebugMode)
-           printf("Unhandled execption was caused during exection\n");
-       ret.bTerminated = true;
-       ret.bException = true;
-       return ret;
+        if (bDebugMode)
+            printf("Unhandled execption was caused during exection\n");
+        
+        ret.bTerminated = true;
+        ret.bException = true;
+        return ret;
     }
     
     programCounter = nextProgramCounter;
