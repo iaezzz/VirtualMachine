@@ -20,7 +20,7 @@ op assembler(unsigned int *commandLine, string data, string *dest)
 		istringstream iss(data);
 		vector<string> parsedCmd{ istream_iterator<string>{iss}, istream_iterator<string>{} };
 
-		int commandLength = parsedCmd.size();
+		int64_t commandLength = parsedCmd.size();
 		int command = 0;
 		op checkResult1 = 0, checkResult2 = 0, checkResult3 = 0;
 		op oper1 = 0, oper2 = 0, oper3 = 0;		
@@ -753,6 +753,7 @@ op assembler(unsigned int *commandLine, string data, string *dest)
 		*dest = "";
 		return (int)errList::ContainSpace;
 	}
+    return (int)errList::ContainSpace;
 }
 
 op checkOpName(string opName, op *opValue)
