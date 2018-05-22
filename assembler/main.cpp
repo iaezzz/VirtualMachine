@@ -10,6 +10,18 @@
 #include "asmFunc.h"
 #include "asmOutMsg.h"
 
+string eliminateCrLf(string& source)
+{
+    std::string output;
+    output.reserve(source.length());
+    
+    std::copy_if(source.begin(), source.end(),
+                 std::back_inserter(output),
+                 [] (char c) { return c != '\r' && c != '\n'; });
+    
+    return output;
+}
+
 int main(int argc, char** argv)
 {
 	std::vector <string> args(argv, argv + argc);
@@ -47,7 +59,8 @@ int main(int argc, char** argv)
 				while (!infile.eof() && (cmdLine != -1))
 				{
 					getline(infile, data);
-					assembler(&cmdLine, data, &dest);
+                    data = eliminateCrLf(data);
+					assembler(&cmdLine, data.c_str(), &dest);
 					systemDelay(50);
 				}
 				infile.close();
